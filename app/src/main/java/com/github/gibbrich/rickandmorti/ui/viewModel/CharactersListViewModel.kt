@@ -12,8 +12,14 @@ import java.lang.Exception
 import javax.inject.Inject
 
 class CharactersListViewModel : ViewModel() {
-    private val state = MutableLiveData<State>(State.Empty)
-    val viewState: LiveData<State> = state
+    private val charactersSource = MutableLiveData<List<Character>?>(null)
+    val characters: LiveData<List<Character>?> = charactersSource
+
+    private val loadingSource = MutableLiveData(false)
+    val loading: LiveData<Boolean> = loadingSource
+
+    private val errorSource: MutableLiveData<Boolean?> = MutableLiveData(false)
+    val error: LiveData<Boolean?> = errorSource
 
     @Inject
     internal lateinit var charactersRepository: CharactersRepository
@@ -25,25 +31,27 @@ class CharactersListViewModel : ViewModel() {
     }
 
     fun fetchCharacters() {
+        loadingSource.value = true
         viewModelScope.launch {
-            state.value = try {
+            try {
                 val characters = charactersRepository.getCharacters(isFirstPhotosLoad.not())
 
                 if (isFirstPhotosLoad) {
                     isFirstPhotosLoad = false
                 }
 
-                State.Loaded(characters)
+                charactersSource.value = characters
             } catch (e: Exception) {
                 e.printStackTrace()
-                State.LoadError
+                errorSource.value = true
+                errorSource.value = null
+            } finally {
+                loadingSource.value = false
             }
         }
     }
 
     sealed class State {
-        object LoadError: State()
-        object Loading: State()
         object Empty: State()
         data class Loaded(val characters: List<Character>): State()
     }

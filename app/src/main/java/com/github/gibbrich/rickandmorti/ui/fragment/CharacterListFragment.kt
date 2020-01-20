@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.GridLayoutManager
@@ -22,15 +23,11 @@ import kotlinx.android.synthetic.main.characters_list_fragment.*
 import javax.inject.Inject
 
 class CharacterListFragment : Fragment(), ViewHolderListener {
-    companion object {
-        fun newInstance() = CharacterListFragment()
-    }
-
     @Inject
     lateinit var navigationManager: INavigationManager
 
     private lateinit var viewModel: CharactersListViewModel
-    private lateinit var adapter: CharactersAdapter
+    private var adapter: CharactersAdapter? = null
     private var characterTransitionUrl: String? = null
 
     init {
@@ -57,39 +54,43 @@ class CharacterListFragment : Fragment(), ViewHolderListener {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProviders.of(this).get(CharactersListViewModel::class.java)
 
-        viewModel.viewState.observe(this, Observer(::handleState))
+        viewModel.characters.observe(this, Observer(::handleCharacters))
+        viewModel.loading.observe(this, Observer(::handleLoading))
+        viewModel.error.observe(this, Observer(::handleError))
 
         characters_list_fragment_swipe_layout.setOnRefreshListener(viewModel::fetchCharacters)
 
         activity_main_characters_list.layoutManager = getGridLayoutManager()
-        adapter = CharactersAdapter(fragment = this)
+        if (adapter == null) {
+            adapter = CharactersAdapter(fragment = this)
+        }
         activity_main_characters_list.adapter = adapter
     }
 
-    private fun handleState(state: CharactersListViewModel.State) = when (state) {
-        CharactersListViewModel.State.LoadError -> {
-            characters_list_fragment_swipe_layout.isRefreshing = false
-        }
+    private fun handleLoading(isLoading: Boolean) {
+        characters_list_fragment_swipe_layout.isRefreshing = isLoading
+    }
 
-        CharactersListViewModel.State.Loading -> {
-            characters_list_fragment_swipe_layout.isRefreshing = true
-        }
-
-        CharactersListViewModel.State.Empty -> {
-            activity_main_empty_label.text = getString(R.string.activity_main_no_data)
-            activity_main_empty_label.visibility = View.VISIBLE
-            activity_main_characters_list.visibility = View.GONE
-            characters_list_fragment_swipe_layout.isRefreshing = false
-        }
-
-        is CharactersListViewModel.State.Loaded -> {
-            activity_main_empty_label.visibility = View.GONE
-            activity_main_characters_list.visibility = View.VISIBLE
-            adapter.addDataToStart(state.characters)
-            characters_list_fragment_swipe_layout.isRefreshing = false
+    private fun handleError(isError: Boolean?) {
+        // todo - change to Snack and error text
+        if (isError != null && isError) {
+            Toast.makeText(activity, "Error", Toast.LENGTH_SHORT).show()
         }
     }
 
+    private fun handleCharacters(characters: List<Character>?) {
+        if (characters == null) {
+            activity_main_empty_label.text = getString(R.string.activity_main_no_data)
+            activity_main_empty_label.visibility = View.VISIBLE
+            activity_main_characters_list.visibility = View.GONE
+        } else {
+            activity_main_empty_label.visibility = View.GONE
+            activity_main_characters_list.visibility = View.VISIBLE
+            adapter?.addDataToStart(characters)
+        }
+    }
+
+    // todo - replace GridLayoutManager with LinearLayoutManager
     private fun getGridLayoutManager(): GridLayoutManager {
         val glm = GridLayoutManager(activity, 3)
         glm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {

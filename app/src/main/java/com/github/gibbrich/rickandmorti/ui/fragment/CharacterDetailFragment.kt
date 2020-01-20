@@ -46,6 +46,7 @@ class CharacterDetailFragment : Fragment() {
             postponeEnterTransition()
         }
 
+        // todo - add from place и episode number
         root.fragment_character_detail_character_image.transitionName = character.photoUrl
         root.fragment_character_detail_character_name.text = character.name
 
