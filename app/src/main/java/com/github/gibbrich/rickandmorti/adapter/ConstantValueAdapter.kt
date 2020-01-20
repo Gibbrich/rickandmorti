@@ -33,5 +33,6 @@ abstract class ConstantValueAdapter<T, VH : RecyclerView.ViewHolder>(
     fun setData(data: List<T>) {
         items.clear()
         items.addAll(data)
+        notifyDataSetChanged()
     }
 }

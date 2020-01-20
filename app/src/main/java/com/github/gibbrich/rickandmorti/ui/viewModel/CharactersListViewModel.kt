@@ -12,47 +12,35 @@ import java.lang.Exception
 import javax.inject.Inject
 
 class CharactersListViewModel : ViewModel() {
-    private val charactersSource = MutableLiveData<List<Character>?>(null)
-    val characters: LiveData<List<Character>?> = charactersSource
+    @Inject
+    internal lateinit var charactersRepository: CharactersRepository
+
+    val characters: LiveData<List<Character>>
 
     private val loadingSource = MutableLiveData(false)
     val loading: LiveData<Boolean> = loadingSource
 
-    private val errorSource: MutableLiveData<Boolean?> = MutableLiveData(false)
-    val error: LiveData<Boolean?> = errorSource
-
-    @Inject
-    internal lateinit var charactersRepository: CharactersRepository
-
-    private var isFirstPhotosLoad = true
+    private val errorSource: MutableLiveData<Boolean> = MutableLiveData(false)
+    val error: LiveData<Boolean> = errorSource
 
     init {
         DI.appComponent.inject(this)
+
+        characters = charactersRepository.characters
     }
 
     fun fetchCharacters() {
         loadingSource.value = true
         viewModelScope.launch {
             try {
-                val characters = charactersRepository.getCharacters(isFirstPhotosLoad.not())
-
-                if (isFirstPhotosLoad) {
-                    isFirstPhotosLoad = false
-                }
-
-                charactersSource.value = characters
+                charactersRepository.fetchCharacters()
             } catch (e: Exception) {
                 e.printStackTrace()
                 errorSource.value = true
-                errorSource.value = null
+                errorSource.value = false
             } finally {
                 loadingSource.value = false
             }
         }
-    }
-
-    sealed class State {
-        object Empty: State()
-        data class Loaded(val characters: List<Character>): State()
     }
 }

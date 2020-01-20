@@ -71,22 +71,22 @@ class CharacterListFragment : Fragment(), ViewHolderListener {
         characters_list_fragment_swipe_layout.isRefreshing = isLoading
     }
 
-    private fun handleError(isError: Boolean?) {
+    private fun handleError(isError: Boolean) {
         // todo - change to Snack and error text
-        if (isError != null && isError) {
+        if (isError) {
             Toast.makeText(activity, "Error", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun handleCharacters(characters: List<Character>?) {
-        if (characters == null) {
+    private fun handleCharacters(characters: List<Character>) {
+        if (characters.isEmpty()) {
             activity_main_empty_label.text = getString(R.string.activity_main_no_data)
             activity_main_empty_label.visibility = View.VISIBLE
             activity_main_characters_list.visibility = View.GONE
         } else {
             activity_main_empty_label.visibility = View.GONE
             activity_main_characters_list.visibility = View.VISIBLE
-            adapter?.addDataToStart(characters)
+            adapter?.setData(characters)
         }
     }
 
