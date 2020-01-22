@@ -9,6 +9,7 @@ android {
     configureAndroidModule()
     defaultConfig {
         applicationId = "com.github.gibbrich.rickandmorti"
+        testInstrumentationRunner = "com.github.gibbrich.rickandmorti.MockTestRunner"
     }
 }
 
@@ -30,6 +31,7 @@ dependencies {
     implementation(Deps.common.vm)
     implementation(Deps.common.lifeCycle)
     implementation(Deps.common.recycler)
+    implementation(Deps.common.flexBoxLayout)
     implementation(Deps.common.cardView)
     implementation(Deps.common.glide) {
         exclude("com.android.support")
@@ -37,19 +39,25 @@ dependencies {
 
     kapt(Deps.core.daggerCompiler)
 
-    testImplementation(Deps.test.junit)
-    androidTestImplementation(Deps.test.androidTestRunner)
-    androidTestImplementation(Deps.test.androidTestRules)
-    androidTestImplementation(Deps.test.espresso)
-
     val nav_version_ktx = "2.1.0-alpha05"
 
     implementation("androidx.navigation:navigation-fragment-ktx:$nav_version_ktx")
     implementation("androidx.navigation:navigation-ui-ktx:$nav_version_ktx")
 
+    implementation(Deps.common.material)
+
+    testImplementation(Deps.test.junit)
+
+    androidTestImplementation(Deps.test.androidTestRunner)
+    androidTestImplementation(Deps.test.androidTestRules)
+    androidTestImplementation(Deps.test.espresso)
     androidTestImplementation(Deps.test.dexOpener)
     androidTestImplementation(Deps.test.mockitoCore)
     androidTestImplementation(Deps.test.mockitoAndroid)
     androidTestImplementation(Deps.test.mockitoKotlin)
+    androidTestImplementation(Deps.test.runner)
+    androidTestImplementation(Deps.test.rules)
+    androidTestImplementation(Deps.test.arch)
+    androidTestImplementation(Deps.test.coroutinesTesting)
     kaptAndroidTest(Deps.core.daggerCompiler)
 }

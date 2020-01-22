@@ -2,7 +2,6 @@ package com.github.gibbrich.rickandmorti.data.converter
 
 import com.github.gibbrich.rickandmorti.core.model.Character
 import com.github.gibbrich.rickandmorti.data.api.model.NWCharacter
-import com.github.gibbrich.rickandmorti.data.api.model.getFirstEpisode
 import com.github.gibbrich.rickandmorti.data.db.entity.DBCharacter
 
 object CharactersConverter {
@@ -10,21 +9,26 @@ object CharactersConverter {
         data.id,
         data.name,
         data.firstEpisode,
-        data.photoUrl
+        data.photoUrl,
+        data.origin
     )
 
     fun toDB(data: Character): DBCharacter = DBCharacter(
         data.id,
         data.name,
         data.firstEpisode,
+        data.origin,
         data.photoUrl
     )
 
-
-    fun fromNetwork(data: NWCharacter): Character = Character(
+    fun fromNetwork(
+        data: NWCharacter,
+        episode: String
+    ): Character = Character(
         data.id,
         data.name,
-        data.getFirstEpisode(),
-        data.photoUrl
+        episode,
+        data.photoUrl,
+        data.origin.name
     )
 }

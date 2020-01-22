@@ -1,7 +1,5 @@
 package com.github.gibbrich.rickandmorti.data.repository
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.map
 import com.github.gibbrich.rickandmorti.core.model.Character
 import com.github.gibbrich.rickandmorti.core.repository.CharactersRepository
 import com.github.gibbrich.rickandmorti.core.repository.PreferencesRepository
@@ -10,7 +8,6 @@ import com.github.gibbrich.rickandmorti.data.api.model.getCharacterIds
 import com.github.gibbrich.rickandmorti.data.converter.CharactersConverter
 import com.github.gibbrich.rickandmorti.data.db.AppDatabase
 import retrofit2.HttpException
-import java.lang.Exception
 
 /**
  * Places, marked with "note" can be improved in terms of performance by adding
@@ -21,15 +18,16 @@ class CharactersDataRepository(
     private val db: AppDatabase,
     private val preferencesRepository: PreferencesRepository
 ) : CharactersRepository {
-    // note - for increasing performance we can also add in-memory cache
-    override val characters: LiveData<List<Character>> = db.charactersDao()
-        .getCharacters()
-        .map {
-            it.map(CharactersConverter::fromDB)
+    override suspend fun fetchNextCharacters(limit: Int, start: Int): List<Character> {
+        val characters = db.charactersDao()
+            .getCharacters(start, limit)
+            .map(CharactersConverter::fromDB)
+        if (characters.isNotEmpty()) {
+            return characters
         }
 
-    override suspend fun fetchCharacters() {
         val episode = preferencesRepository.getEpisodesCached() + 1
+
         val episodeResponse = try {
             api.getEpisode(episode)
         } catch (e: Exception) {
@@ -37,7 +35,7 @@ class CharactersDataRepository(
             // error 404 will be returned. In this case just do nothing, otherwise
             // throw error further
             if (e is HttpException && e.code() == 404) {
-                return
+                return emptyList()
             } else {
                 throw e
             }
@@ -53,13 +51,18 @@ class CharactersDataRepository(
         // in case of all characters are fetched, there can be case, that for
         // particular episode we won't fetch anybody. For simplicity we just
         // update episodes fetched and do not update list or notify user.
-        if (charactersToFetch.isNotEmpty()) {
-            val characters =
-                api.getCharacters(charactersToFetch).map(CharactersConverter::fromNetwork)
-            val dbCharacters = characters.map(CharactersConverter::toDB)
+        val result = if (charactersToFetch.isNotEmpty()) {
+            val fetchedCharacters = api.getCharacters(charactersToFetch)
+                    .map { CharactersConverter.fromNetwork(it, episodeResponse.episode) }
+            val dbCharacters = fetchedCharacters.map(CharactersConverter::toDB)
             db.charactersDao().insert(dbCharacters)
+            fetchedCharacters
+        } else {
+            emptyList()
         }
 
         preferencesRepository.updateEpisodesCached()
+
+        return result
     }
 }

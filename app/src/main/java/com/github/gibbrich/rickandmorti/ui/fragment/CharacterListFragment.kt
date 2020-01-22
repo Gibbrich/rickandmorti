@@ -7,28 +7,54 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.Toast
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.github.gibbrich.rickandmorti.R
 import com.github.gibbrich.rickandmorti.adapter.CharactersAdapter
+import com.github.gibbrich.rickandmorti.adapter.FooterState
 import com.github.gibbrich.rickandmorti.adapter.ViewHolderListener
 import com.github.gibbrich.rickandmorti.core.manager.INavigationManager
 import com.github.gibbrich.rickandmorti.core.model.Character
 import com.github.gibbrich.rickandmorti.di.DI
 import com.github.gibbrich.rickandmorti.ui.viewModel.CharactersListViewModel
+import com.github.gibbrich.rickandmorti.ui.viewModel.LoadingState
 import kotlinx.android.synthetic.main.characters_list_fragment.*
 import javax.inject.Inject
 
-class CharacterListFragment : Fragment(), ViewHolderListener {
+class CharacterListFragment : Fragment() {
     @Inject
     lateinit var navigationManager: INavigationManager
 
-    private lateinit var viewModel: CharactersListViewModel
+    private val viewModel: CharactersListViewModel by viewModels()
     private var adapter: CharactersAdapter? = null
     private var characterTransitionUrl: String? = null
+
+    private val viewHolderListenerDelegate = object : ViewHolderListener {
+        override fun onLoadCompleted(model: String) {
+            // Call startPostponedEnterTransition only when the 'selected' image loading is completed.
+            if (characterTransitionUrl == model) {
+                startPostponedEnterTransition()
+            }
+        }
+
+        override fun onItemClicked(view: View, character: Character) {
+            // Update the position.
+            characterTransitionUrl = character.photoUrl
+
+            // Exclude the clicked card from the exit transition (e.g. the card will disappear immediately
+            // instead of fading out with the rest to prevent an overlapping animation of fade and move).
+            (exitTransition as TransitionSet).excludeTarget(view, true)
+
+            navigationManager.switchToCharacterDetailScreen(view, character)
+        }
+
+        override fun onRetry() {
+            viewModel.fetchCharactersPage()
+        }
+    }
 
     init {
         DI.appComponent.inject(this)
@@ -52,88 +78,53 @@ class CharacterListFragment : Fragment(), ViewHolderListener {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(CharactersListViewModel::class.java)
 
-        viewModel.characters.observe(this, Observer(::handleCharacters))
-        viewModel.loading.observe(this, Observer(::handleLoading))
-        viewModel.error.observe(this, Observer(::handleError))
+        viewModel.charactersPage.observe(this, Observer(::handleCharacters))
+        viewModel.loadingState.observe(this, Observer(::handleLoadingState))
 
-        characters_list_fragment_swipe_layout.setOnRefreshListener(viewModel::fetchCharacters)
+        val layoutManager = LinearLayoutManager(activity)
+        activity_main_characters_list.layoutManager = layoutManager
 
-        activity_main_characters_list.layoutManager = getGridLayoutManager()
         if (adapter == null) {
-            adapter = CharactersAdapter(fragment = this)
+            // on fragment recreation we don't need subscription, so we just repopulate
+            // cached data
+            adapter = CharactersAdapter(
+                viewHolderListenerDelegate,
+                Glide.with(this),
+                viewModel.charactersCached.toMutableList() // important to perform deep copy to avoid double data, as viewModel.charactersCached populate during work
+            )
         }
         activity_main_characters_list.adapter = adapter
+        setRecyclerViewScrollListener(activity_main_characters_list, layoutManager, adapter!!)
     }
 
-    private fun handleLoading(isLoading: Boolean) {
-        characters_list_fragment_swipe_layout.isRefreshing = isLoading
-    }
-
-    private fun handleError(isError: Boolean) {
-        // todo - change to Snack and error text
-        if (isError) {
-            Toast.makeText(activity, "Error", Toast.LENGTH_SHORT).show()
+    private fun handleLoadingState(state: LoadingState?) {
+        val footerState = when (state) {
+            LoadingState.LOADING -> FooterState.LOADING
+            LoadingState.ERROR -> FooterState.ERROR
+            null -> null
         }
+        adapter?.updateFooterState(footerState)
     }
 
     private fun handleCharacters(characters: List<Character>) {
-        if (characters.isEmpty()) {
-            activity_main_empty_label.text = getString(R.string.activity_main_no_data)
-            activity_main_empty_label.visibility = View.VISIBLE
-            activity_main_characters_list.visibility = View.GONE
-        } else {
-            activity_main_empty_label.visibility = View.GONE
-            activity_main_characters_list.visibility = View.VISIBLE
-            adapter?.setData(characters)
-        }
+        adapter?.addItems(characters)
     }
 
-    // todo - replace GridLayoutManager with LinearLayoutManager
-    private fun getGridLayoutManager(): GridLayoutManager {
-        val glm = GridLayoutManager(activity, 3)
-        glm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                if (position % 3 == 2) {
-                    return 3
-                }
-                return when (position % 4) {
-                    1, 3 -> 1
-                    0, 2 -> 2
-                    else ->
-                        //never gonna happen
-                        -1
-                }
+    private fun setRecyclerViewScrollListener(
+        recyclerView: RecyclerView,
+        layoutManager: LinearLayoutManager,
+        adapter: CharactersAdapter
+    ) = recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
+            val shouldFetchCharacters =
+                adapter.footerState == null && layoutManager.itemCount == lastVisibleItemPosition + 1
+            if (shouldFetchCharacters) {
+                viewModel.fetchCharactersPage()
             }
         }
-        glm.spanSizeLookup.isSpanIndexCacheEnabled = true
-        return glm
-    }
-
-    override fun onLoadCompleted(view: ImageView) {
-        // Call startPostponedEnterTransition only when the 'selected' image loading is completed.
-        if (characterTransitionUrl == view.transitionName) {
-            startPostponedEnterTransition()
-        }
-    }
-
-    /**
-     * Handles a view click by setting the current position to the given `position` and
-     * starting a [ImagePagerFragment] which displays the image at the position.
-     *
-     * @param view the clicked [ImageView] (the shared element view will be re-mapped at the
-     * GridFragment's SharedElementCallback)
-     * @param position the selected view position
-     */
-    override fun onItemClicked(view: View, character: Character) {
-        // Update the position.
-        characterTransitionUrl = character.photoUrl
-
-        // Exclude the clicked card from the exit transition (e.g. the card will disappear immediately
-        // instead of fading out with the rest to prevent an overlapping animation of fade and move).
-        (exitTransition as TransitionSet).excludeTarget(view, true)
-
-        navigationManager.switchToCharacterDetailScreen(view, character)
-    }
+    })
 }

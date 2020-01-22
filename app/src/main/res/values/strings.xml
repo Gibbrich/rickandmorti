@@ -1,7 +1,9 @@
 <resources>
-    <string name="app_name">RIck and Morti</string>
+    <string name="app_name">Rick and Morty</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="activity_main_no_data">No data\n Pull to update</string>
+    <string name="characters_list_error">Error occurred. Try again later.</string>
+    <string name="retry">Retry</string>
 </resources>

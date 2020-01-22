@@ -1,6 +1,5 @@
 package com.github.gibbrich.rickandmorti.core.repository
 
-import androidx.lifecycle.LiveData
 import com.github.gibbrich.rickandmorti.core.model.Character
 
 /**
@@ -9,12 +8,7 @@ import com.github.gibbrich.rickandmorti.core.model.Character
 interface CharactersRepository {
 
     /**
-     * Fetches all characters from local DB, sorted by [Character.firstEpisode]
-     */
-    val characters: LiveData<List<Character>>
-
-    /**
      * Fetches additional characters chunk from server and saves to local DB.
      */
-    suspend fun fetchCharacters()
+    suspend fun fetchNextCharacters(limit: Int, start: Int): List<Character>
 }

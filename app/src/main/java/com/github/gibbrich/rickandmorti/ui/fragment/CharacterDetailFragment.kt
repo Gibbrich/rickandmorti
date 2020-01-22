@@ -27,7 +27,7 @@ class CharacterDetailFragment : Fragment() {
     }
 
     private val character by lazy {
-        arguments?.getParcelable<Character>(CHARACTER_KEY)!!
+        arguments?.getParcelable<Character>(CHARACTER_KEY) ?: throw Exception("No Character passed as argument")
     }
 
     override fun onCreateView(
@@ -46,9 +46,10 @@ class CharacterDetailFragment : Fragment() {
             postponeEnterTransition()
         }
 
-        // todo - add from place и episode number
         root.fragment_character_detail_character_image.transitionName = character.photoUrl
         root.fragment_character_detail_character_name.text = character.name
+        root.fragment_character_detail_character_origin.text = character.origin
+        root.fragment_character_detail_character_first_episode.text = character.firstEpisode
 
         Glide.with(this)
             .load(character.photoUrl)
@@ -80,6 +81,7 @@ class CharacterDetailFragment : Fragment() {
                     return false
                 }
             })
+            .error(R.drawable.ic_broken_image_black_24dp)
             .into(root.fragment_character_detail_character_image)
 
 

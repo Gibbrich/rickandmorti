@@ -17,6 +17,8 @@ dependencies {
     api(Deps.common.coroutinesAndroid)
 
     api(Deps.common.liveData)
+    api(Deps.common.liveDataSingleEvent)
+    api(Deps.common.paging)
 
     api(Deps.core.dagger)
     kapt(Deps.core.daggerCompiler)

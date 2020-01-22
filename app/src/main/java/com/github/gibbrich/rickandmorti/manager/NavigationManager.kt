@@ -17,11 +17,13 @@ class NavigationManager : INavigationManager {
     ) {
         val extras = FragmentNavigatorExtras(characterImage to character.photoUrl)
 
-        navController?.navigate(
-            R.id.action_characterListFragment_to_characterDetailFragment,
-            CharacterDetailFragment.getParams(character),
-            null,
-            extras
-        )
+        if (navController?.currentDestination?.id == R.id.charactersListFragment) {
+            navController?.navigate(
+                R.id.action_characterListFragment_to_characterDetailFragment,
+                CharacterDetailFragment.getParams(character),
+                null,
+                extras
+            )
+        }
     }
 }

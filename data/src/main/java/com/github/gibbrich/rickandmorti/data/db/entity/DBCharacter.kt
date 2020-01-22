@@ -14,7 +14,10 @@ data class DBCharacter(
     val name: String,
 
     @ColumnInfo(name = "first_episode")
-    val firstEpisode: Int,
+    val firstEpisode: String,
+
+    @ColumnInfo(name = "origin")
+    val origin: String,
 
     @ColumnInfo(name = "photo_url")
     val photoUrl: String

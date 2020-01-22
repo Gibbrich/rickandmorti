@@ -3,7 +3,14 @@ package com.github.gibbrich.rickandmorti.core.repository
 import android.content.SharedPreferences
 
 interface PreferencesRepository {
+    /**
+     * @return number of episodes user already fetched from server and cached
+     */
     fun getEpisodesCached(): Int
+
+    /**
+     * Increments number of episodes fetched from server and cached
+     */
     fun updateEpisodesCached()
 }
 

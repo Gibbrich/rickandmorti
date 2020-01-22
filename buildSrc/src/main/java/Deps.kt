@@ -1,19 +1,24 @@
 object Deps {
     private const val kotlinVersion = "1.3.50"
-    const val gradle = "com.android.tools.build:gradle:3.5.0"
+    const val androidGradle = "com.android.tools.build:gradle:3.5.0"
     const val kotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+    const val coroutines_android_version = "1.3.2"
+    const val lifecycle_version = "2.1.0"
 
     object common {
         const val constraint = "androidx.constraintlayout:constraintlayout:1.1.3"
         const val swipeRefresh = "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
         const val arch = "androidx.arch.core:core-common:2.0.0"
-        const val lifecycle_version = "2.1.0"
         const val vm = "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
         const val lifeCycle = "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
         const val liveData = "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
+        const val liveDataSingleEvent = "com.github.hadilq.liveevent:liveevent:1.2.0"
         const val recycler = "androidx.recyclerview:recyclerview:1.0.0"
         const val cardView = "androidx.cardview:cardview:1.0.0"
         const val appCompat = "androidx.appcompat:appcompat:1.0.0-beta01"
+        const val material = "com.google.android.material:material:1.0.0"
+        const val flexBoxLayout = "com.google.android:flexbox:2.0.1"
+        const val paging = "androidx.paging:paging-runtime-ktx:2.1.1"
 
         const val glide = "com.github.bumptech.glide:glide:4.9.0"
 
@@ -28,9 +33,19 @@ object Deps {
         const val androidTestRules = "com.android.support.test:rules:1.0.2"
         const val espresso = "androidx.test.espresso:espresso-core:3.1.0-alpha4"
         const val mockitoAndroid = "org.mockito:mockito-android:2.25.0"
-        const val mockitoCore = "org.mockito:mockito-core:2.8.9"
+        const val mockitoCore = "org.mockito:mockito-core:3.2.4"
         const val mockitoKotlin = "com.nhaarman.mockitokotlin2:mockito-kotlin:2.1.0"
         const val dexOpener = "com.github.tmurakami:dexopener:2.0.2"
+
+        const val androidx_test_version = "1.2.0"
+        const val runner = "androidx.test:runner:$androidx_test_version"
+        const val rules = "androidx.test:rules:$androidx_test_version"
+
+        //  Architecture Components testing libraries
+        const val arch = "androidx.arch.core:core-testing:$lifecycle_version"
+
+        // Coroutines testing
+        const val coroutinesTesting = "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_android_version"
     }
 
     object core {

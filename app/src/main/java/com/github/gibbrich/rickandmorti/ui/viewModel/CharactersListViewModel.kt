@@ -7,40 +7,61 @@ import androidx.lifecycle.viewModelScope
 import com.github.gibbrich.rickandmorti.core.model.Character
 import com.github.gibbrich.rickandmorti.core.repository.CharactersRepository
 import com.github.gibbrich.rickandmorti.di.DI
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.Exception
 import javax.inject.Inject
 
 class CharactersListViewModel : ViewModel() {
+    companion object {
+        private const val CHARACTERS_IN_PAGE = 20
+    }
+
     @Inject
     internal lateinit var charactersRepository: CharactersRepository
 
-    val characters: LiveData<List<Character>>
+    private val characters = mutableListOf<Character>()
+    val charactersCached: List<Character> = characters
 
-    private val loadingSource = MutableLiveData(false)
-    val loading: LiveData<Boolean> = loadingSource
+    private val charactersSource = MutableLiveData<List<Character>>(emptyList())
+    val charactersPage: LiveData<List<Character>> = charactersSource
 
-    private val errorSource: MutableLiveData<Boolean> = MutableLiveData(false)
-    val error: LiveData<Boolean> = errorSource
+    private val stateSource = MutableLiveData<LoadingState?>()
+    val loadingState: LiveData<LoadingState?> = stateSource
 
     init {
         DI.appComponent.inject(this)
 
-        characters = charactersRepository.characters
+        fetchCharactersPage()
     }
 
-    fun fetchCharacters() {
-        loadingSource.value = true
+    fun fetchCharactersPage() {
+        if (stateSource.value == LoadingState.LOADING) {
+            return
+        }
+
+        stateSource.value = LoadingState.LOADING
         viewModelScope.launch {
-            try {
-                charactersRepository.fetchCharacters()
+            val result = try {
+                val page = charactersRepository.fetchNextCharacters(CHARACTERS_IN_PAGE, characters.size)
+                stateSource.value = null
+
+                page
             } catch (e: Exception) {
                 e.printStackTrace()
-                errorSource.value = true
-                errorSource.value = false
-            } finally {
-                loadingSource.value = false
+                stateSource.value = LoadingState.ERROR
+
+                emptyList<Character>()
             }
+
+            characters += result
+
+            charactersSource.value = result
+            charactersSource.value = emptyList()
         }
     }
+}
+
+enum class LoadingState {
+    LOADING, ERROR
 }

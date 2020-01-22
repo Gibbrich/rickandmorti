@@ -1,6 +1,5 @@
 package com.github.gibbrich.rickandmorti.data.db.dao
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -9,8 +8,11 @@ import com.github.gibbrich.rickandmorti.data.db.entity.DBCharacter
 
 @Dao
 interface CharactersDao {
-    @Query("SELECT id, name, first_episode, photo_url FROM character ORDER BY first_episode DESC")
-    fun getCharacters(): LiveData<List<DBCharacter>>
+    /**
+     * Fetch characters chunk. Used for pagination.
+     */
+    @Query("SELECT * FROM character ORDER BY first_episode LIMIT :limit OFFSET :start")
+    suspend fun getCharacters(start: Int, limit: Int): List<DBCharacter>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(characters: List<DBCharacter>)

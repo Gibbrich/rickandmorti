@@ -16,11 +16,8 @@ class NWCharacter(
     val episodes: List<String>,
 
     @SerializedName("image")
-    val photoUrl: String
-)
+    val photoUrl: String,
 
-fun NWCharacter.getFirstEpisode(): Int = episodes
-    .map {
-        it.substringAfter("episode/").toInt()
-    }
-    .min()!!
+    @SerializedName("origin")
+    val origin: NWOrigin
+)

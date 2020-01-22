@@ -1,11 +1,13 @@
 package com.github.gibbrich.rickandmorti.adapter
 
 import android.graphics.drawable.Drawable
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.fragment.app.Fragment
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import com.bumptech.glide.RequestManager
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -13,32 +15,134 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.github.gibbrich.rickandmorti.R
 import com.github.gibbrich.rickandmorti.core.model.Character
+import com.github.gibbrich.rickandmorti.ui.utils.createCircularProgressDrawable
+import kotlinx.android.synthetic.main.item_list_loading.view.*
 import kotlinx.android.synthetic.main.layout_list_characters_item.view.*
 
 class CharactersAdapter(
-    items: MutableList<Character> = mutableListOf(),
-    fragment: Fragment
-) : ConstantValueAdapter<Character, CharactersAdapter.Holder>(items) {
+    private val viewHolderListener: ViewHolderListener,
+    private val requestManager: RequestManager,
+    private val items: MutableList<Character> = mutableListOf()
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    companion object {
+        private const val VIEW_TYPE_ITEM = 0
+        private const val VIEW_TYPE_FOOTER = 1
+    }
 
-    private val requestManager: RequestManager = Glide.with(fragment)
-    private val viewHolderListener = fragment as ViewHolderListener
+    var footerState: FooterState? = null
+        private set
 
-    override fun createHolder(view: View): Holder =
-        Holder(
-            view,
-            view.list_characters_item_character_image
-        )
+    private var footerViewHolder: FooterViewHolder? = null
 
-    override val lineResourceId = R.layout.layout_list_characters_item
+    init {
+        if (items.isNotEmpty()) {
+            notifyDataSetChanged()
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val context = parent.context
+
+        when (viewType) {
+            VIEW_TYPE_ITEM -> {
+                val view = LayoutInflater
+                    .from(context)
+                    .inflate(R.layout.layout_list_characters_item, parent, false)
+                val circularProgressDrawable = createCircularProgressDrawable(context)
+                return CharacterViewHolder(
+                    view,
+                    view.list_characters_item_character_image,
+                    view.list_characters_item_character_name,
+                    circularProgressDrawable
+                )
+            }
+
+            else -> {
+                val view = LayoutInflater
+                    .from(context)
+                    .inflate(R.layout.item_list_loading, parent, false)
+                val footerViewHolder = FooterViewHolder(view, viewHolderListener::onRetry)
+                this.footerViewHolder = footerViewHolder
+                return footerViewHolder
+            }
+        }
+
+    }
+
+    private fun shouldShowFooter() = footerState != null
+
+    override fun getItemCount(): Int {
+        return if (shouldShowFooter()) items.size + 1 else items.size
+    }
+
+    override fun getItemViewType(position: Int): Int =
+        if (shouldShowFooter() && position == items.size) {
+            VIEW_TYPE_FOOTER
+        }
+        else {
+            VIEW_TYPE_ITEM
+        }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (getItemViewType(position)) {
+            VIEW_TYPE_ITEM -> {
+                (holder as CharacterViewHolder).bind(
+                    viewHolderListener,
+                    items[position],
+                    requestManager
+                )
+            }
+
+            VIEW_TYPE_FOOTER -> {
+                (holder as FooterViewHolder).bind(footerState)
+            }
+        }
+    }
+
+    fun updateFooterState(state: FooterState?) {
+        if (footerState == null) {
+            footerState = state
+            if (state != null) {
+                notifyItemInserted(items.size + 1)
+            } else {
+                notifyItemChanged(items.size)
+            }
+        } else {
+            footerState = state
+            if (state == null) {
+                notifyItemRemoved(items.size + 1)
+            } else {
+                notifyItemChanged(items.size)
+            }
+        }
+    }
+
+    fun addItems(items: List<Character>) {
+        if (items.isEmpty())
+            return
+
+        val positionStart = this.items.size
+        this.items.addAll(items)
+        notifyItemRangeInserted(positionStart, items.size)
+    }
+}
+
+private class CharacterViewHolder(
+    view: View,
+    val picture: ImageView,
+    val name: TextView,
+    val circularProgressDrawable: CircularProgressDrawable
+) : RecyclerView.ViewHolder(view) {
 
     /**
-     * Binds this view holder to the given adapter position.
-     *
      * The binding will load the image into the image view, as well as set its transition name for
      * later.
      */
-    override fun bind(holder: Holder, item: Character, position: Int) {
-        // Load the image with Glide to prevent OOM error when the image drawables are very large.
+    fun bind(
+        viewHolderListener: ViewHolderListener,
+        character: Character,
+        requestManager: RequestManager
+    ) {
         val loadListener = object : RequestListener<Drawable> {
             override fun onLoadFailed(
                 e: GlideException?,
@@ -46,7 +150,7 @@ class CharactersAdapter(
                 target: Target<Drawable>,
                 isFirstResource: Boolean
             ): Boolean {
-                viewHolderListener.onLoadCompleted(holder.picture)
+                viewHolderListener.onLoadCompleted(model.toString())
                 return false
             }
 
@@ -57,27 +161,53 @@ class CharactersAdapter(
                 dataSource: DataSource,
                 isFirstResource: Boolean
             ): Boolean {
-                viewHolderListener.onLoadCompleted(holder.picture)
+                viewHolderListener.onLoadCompleted(model.toString())
                 return false
             }
         }
 
         requestManager
-            .load(item.photoUrl)
+            .load(character.photoUrl)
             .listener(loadListener)
-            .into(holder.picture)
+            .placeholder(circularProgressDrawable)
+            .error(R.drawable.ic_broken_image_black_24dp)
+            .into(picture)
 
         // Set the string value of the image resource as the unique transition name for the view.
-        holder.picture.transitionName = item.photoUrl
-        holder.picture.setOnClickListener {
-            viewHolderListener.onItemClicked(it, item)
+        picture.transitionName = character.photoUrl
+        itemView.setOnClickListener {
+            viewHolderListener.onItemClicked(picture, character)
         }
+        name.text = character.name
+    }
+}
+
+private class FooterViewHolder(
+    private val view: View,
+    private val onRetry: () -> Unit
+) : RecyclerView.ViewHolder(view) {
+
+    init {
+        view.btn_retry.setOnClickListener { onRetry() }
     }
 
-    class Holder(
-        view: View,
-        val picture: ImageView
-    ) : RecyclerView.ViewHolder(view)
+    fun bind(footerState: FooterState?) = when (footerState) {
+        FooterState.LOADING -> {
+            view.iv_status.setImageDrawable(createCircularProgressDrawable(itemView.context))
+            view.btn_retry.visibility = View.GONE
+        }
+
+        FooterState.ERROR -> {
+            view.iv_status.setImageResource(R.drawable.ic_error_outline_black_24dp)
+            view.btn_retry.visibility = View.VISIBLE
+        }
+
+        null -> Unit
+    }
+}
+
+enum class FooterState {
+    LOADING, ERROR
 }
 
 /**
@@ -85,7 +215,21 @@ class CharactersAdapter(
  */
 interface ViewHolderListener {
 
-    fun onLoadCompleted(view: ImageView)
+    /**
+     * Notifies, whether specific picture was loaded and ready to display.
+     * @param model URL of picture, that was loaded
+     */
+    fun onLoadCompleted(model: String)
 
+    /**
+     * Handle specific item click.
+     * @param view ImageView, which holds [Character.photoUrl]
+     * @param character [Character], which card was clicked
+     */
     fun onItemClicked(view: View, character: Character)
+
+    /**
+     * Handle error view button "Retry" click
+     */
+    fun onRetry()
 }

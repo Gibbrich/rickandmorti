@@ -9,7 +9,7 @@ import com.github.gibbrich.rickandmorti.di.DI
 import com.github.gibbrich.rickandmorti.di.AppComponent
 import com.github.gibbrich.rickandmorti.di.DaggerAppComponent
 
-class App : Application() {
+open class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
@@ -20,7 +20,10 @@ class App : Application() {
 
     private fun provideNavigationManager(): INavigationManager = NavigationManager()
 
-    private fun provideAppComponent(): AppComponent = DaggerAppComponent
+    /**
+     * Override for implementing UI tests
+     */
+    open fun provideAppComponent(): AppComponent = DaggerAppComponent
         .builder()
         .dataComponent(DataDI.dataComponent)
         .build()
